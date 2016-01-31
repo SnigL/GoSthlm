@@ -35,7 +35,7 @@ public class FavouriteSiteHelper implements IFavouriteSiteDbHelper {
                 + KEY_X + " TEXT,"
                 + KEY_Y + " TEXT,"
                 + KEY_NAME + " TEXT,"
-                + KEY_SORT_ORDER + "INTEGER);";
+                + KEY_SORT_ORDER + " INTEGER);";
 
         GoSthlmLog.d("onCreate: " + CREATE_DEFAULT_TRANSPORTATION_TABLE);
         db.execSQL(CREATE_DEFAULT_TRANSPORTATION_TABLE);
@@ -68,7 +68,7 @@ public class FavouriteSiteHelper implements IFavouriteSiteDbHelper {
         db.insert(TABLE_FAVOURITE_SITE, null, values);
         db.close();
 
-        GoSthlmLog.d("create", values.toString());
+        GoSthlmLog.d("db create " + values.toString());
     }
 
     @Override
@@ -81,20 +81,18 @@ public class FavouriteSiteHelper implements IFavouriteSiteDbHelper {
         db.update(TABLE_FAVOURITE_SITE, values, "id=?", args);
         db.close();
 
-        GoSthlmLog.d("update", values.toString());
+        GoSthlmLog.d("db update " + values.toString());
     }
 
     @Override
     public void remove(FavouriteSite favouriteSite) {
         SQLiteDatabase db = dbHelper.getDb().getWritableDatabase();
 
-        ContentValues values = createFavouriteSiteContentValues(favouriteSite);
-
         String[] args = new String[]{Integer.toString(favouriteSite.getId())};
         db.delete(TABLE_FAVOURITE_SITE, "id=?", args);
         db.close();
 
-        GoSthlmLog.d("remove", values.toString());
+        GoSthlmLog.d("db remove " + args.toString());
     }
 
     @Override

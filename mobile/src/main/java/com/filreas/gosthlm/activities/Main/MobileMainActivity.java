@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.Loader;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.design.widget.Snackbar;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.CardView;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,9 +16,11 @@ import android.widget.CompoundButton;
 import android.widget.TextView;
 
 import com.filreas.gosthlm.R;
+import com.filreas.gosthlm.activities.FavouriteSiteSaveOnClickListener;
+import com.filreas.gosthlm.activities.IFavouriteSiteSaveOnClick;
 import com.filreas.gosthlm.activities.MobileBaseActivity;
-import com.filreas.gosthlm.database.commands.AddOrUpdateFavouriteStationCommand;
 import com.filreas.gosthlm.database.commands.CommandExecuter;
+import com.filreas.gosthlm.database.commands.DeleteFavouriteStationCommand;
 import com.filreas.gosthlm.database.commands.UpdateTransportationOfChoiceCommand;
 import com.filreas.gosthlm.database.helpers.DbHelperWrapper;
 import com.filreas.gosthlm.database.helpers.FavouriteSiteHelper;
@@ -24,12 +28,8 @@ import com.filreas.gosthlm.database.helpers.TransportationOfChoiceHelper;
 import com.filreas.gosthlm.database.model.FavouriteSite;
 import com.filreas.gosthlm.database.model.TransportationOfChoice;
 import com.filreas.gosthlm.database.queries.FavouriteSitesQuery;
-import com.filreas.gosthlm.database.queries.IDataSourceCallbackListener;
-import com.filreas.gosthlm.database.queries.IDataSourceChanged;
 import com.filreas.gosthlm.database.queries.QueryLoader;
 import com.filreas.gosthlm.database.queries.TransportationOfChoiceQuery;
-import com.filreas.gosthlm.slapi.operations.location_finder.contract.request.response.Site;
-import com.filreas.gosthlm.utils.OnItemClickListener;
 import com.filreas.shared.utils.GoSthlmLog;
 import com.filreas.shared.utils.SwipeDismissTouchListener;
 
@@ -42,7 +42,6 @@ public class MobileMainActivity extends MobileBaseActivity implements LoaderMana
     private CheckBox bus;
     private CheckBox train;
     private CheckBox tram;
-    public IDataSourceChanged favouriteSitesChangedListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,14 +66,7 @@ public class MobileMainActivity extends MobileBaseActivity implements LoaderMana
                         context,
                         new FavouriteSitesQuery(
                                 new FavouriteSiteHelper(
-                                        new DbHelperWrapper(context))),
-                        new IDataSourceCallbackListener() {
-
-                            @Override
-                            public void setOnDataChangedListener(IDataSourceChanged dataChangedListener) {
-                                favouriteSitesChangedListener = dataChangedListener;
-                            }
-                        });
+                                        new DbHelperWrapper(context))));
             }
 
             @Override
@@ -124,7 +116,6 @@ public class MobileMainActivity extends MobileBaseActivity implements LoaderMana
     public void setFavouriteSites(List<FavouriteSite> favouriteSites) {
         if (favouriteSites.size() == 0) {
             initGetStartedGuide();
-            return;
         }
     }
 
@@ -151,28 +142,43 @@ public class MobileMainActivity extends MobileBaseActivity implements LoaderMana
     }
 
     private void initStationsSearch() {
-        AutoCompleteStationSearch autoCompleteStationSearch = new AutoCompleteStationSearch(slApi, slApiKeyFetcher);
         final AutoCompleteTextView textView = (AutoCompleteTextView) findViewById(R.id.stationsSearch);
-        autoCompleteStationSearch.setOnClickListener(new OnItemClickListener<Site>() {
-            @Override
-            public void onClick(Site site) {
-                FavouriteSite favouriteSite = new FavouriteSite(
-                        -1,
-                        site.getName(),
-                        site.getSiteId(),
-                        site.getType(),
-                        site.getX(),
-                        site.getY());
-                new CommandExecuter().execute(
-                        new AddOrUpdateFavouriteStationCommand(
-                                new FavouriteSiteHelper(
-                                        new DbHelperWrapper(
-                                                getApplicationContext())),
-                                favouriteSitesChangedListener,
-                                favouriteSite));
-            }
-        });
+        AutoCompleteStationSearch autoCompleteStationSearch = new AutoCompleteStationSearch(slApi, slApiKeyFetcher);
+
+        autoCompleteStationSearch.setOnClickListener(new FavouriteSiteSaveOnClickListener(
+                getApplicationContext(),
+                new IFavouriteSiteSaveOnClick() {
+                    @Override
+                    public void siteSaved(FavouriteSite site) {
+                        showStationAddedSnackbar(site);
+                    }
+                }));
         autoCompleteStationSearch.init(textView);
+    }
+
+    private void showStationAddedSnackbar(final FavouriteSite favouriteSite) {
+        String added = String.format(getString(R.string.stationAddedToFavourites), favouriteSite.getName());
+
+        Snackbar snackbar = Snackbar
+                .make(findViewById(R.id.mainWindowScroll), added, Snackbar.LENGTH_LONG)
+                .setAction(getString(R.string.undo), new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        new CommandExecuter().execute(
+                                new DeleteFavouriteStationCommand(
+                                        new FavouriteSiteHelper(
+                                                new DbHelperWrapper(
+                                                        getApplicationContext())),
+                                        null,
+                                        favouriteSite
+                                )
+                        );
+                    }
+                });
+        View view = snackbar.getView();
+        TextView actionText = (TextView) view.findViewById(android.support.design.R.id.snackbar_action);
+        actionText.setTextColor(ContextCompat.getColor(getApplicationContext(), R.color.accent));
+        snackbar.show();
     }
 
     @Override
