@@ -1,1 +1,4 @@
 language: ANDROID
+
+before_script:
+ - chmod +x grailsw
