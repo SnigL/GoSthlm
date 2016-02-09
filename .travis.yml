@@ -1,0 +1,21 @@
+language: android
+
+os:
+  - linux
+
+jdk:
+  - oraclejdk8
+  
+android:
+  components:
+    - extra-android-m2repository
+    - build-tools-23.0.1
+    - android-23
+    - extra-android-support
+    - extra-google-google_play_services
+    - extra-google-m2repository  
+  licenses:
+    - '.+'
+
+before_script:
+ - chmod +x gradlew
